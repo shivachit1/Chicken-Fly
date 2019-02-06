@@ -1,7 +1,7 @@
 # Chicken Fly
 Game Development Through Android Studio
 
-    Demo Game with level 2
+    Demo Game with level 1
 
 Tools used:
     Android Studio SDK
