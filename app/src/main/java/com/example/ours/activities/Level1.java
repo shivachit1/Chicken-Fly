@@ -21,6 +21,9 @@ import com.example.ours.R;
 import com.example.ours.dialogfragments.menuFragment;
 
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Level1 extends AppCompatActivity {
     private ImageView chicken;
@@ -29,6 +32,8 @@ public class Level1 extends AppCompatActivity {
     private ObjectAnimator objectanimator;
     private int coincounter=0;
     private TextView coincountertext;
+    private TextView scorecounterTextView;
+    private int scorecounter=0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,12 +42,18 @@ public class Level1 extends AppCompatActivity {
 
         mainlayout = findViewById(R.id.main);
 
+        fireImageView = new ImageView(getApplicationContext());
+
         final ConstraintLayout leftlayout = findViewById(R.id.leftlayout);
         ConstraintLayout rightlayout = findViewById(R.id.rightlayout);
         chicken = findViewById(R.id.chicken);
         coin = findViewById(R.id.coin);
         coincountertext=findViewById(R.id.coincountertextview);
         coincountertext.setText(String.valueOf(coincounter));
+
+       scorecounterTextView=findViewById(R.id.scorecounterTextView);
+       scorecounterTextView.setText(String.valueOf(scorecounter));
+
         Button menu = findViewById(R.id.menu);
         ImageView cointitleimage = findViewById(R.id.cointitleimage);
 
@@ -78,6 +89,7 @@ public class Level1 extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 defendPlayerWithCoins();
+
             }
         });
 
@@ -92,52 +104,111 @@ public class Level1 extends AppCompatActivity {
             public boolean onTouch(View v, MotionEvent event) {
                 chicken.setX(event.getX());
                 chicken.setY(event.getY());
+                final int interval = 100;
+                // 1 Second
+                handler2 = new Handler();
+                runnable2 = new Runnable(){
+                    public void run() {
+                       UpdateCollison();
+                        UpdateFireandEnemyCollision();
+                    }
+                };
+                handler2.postDelayed(runnable2, interval);
                 return false;
             }
         });
 
     }
+    private void UpdateFireandEnemyCollision() {
+
+            final int[] loc = new int[2];
+
+            fireImageView.getLocationInWindow(loc);
+            final Rect rc1 = new Rect(loc[0], loc[1],
+                    loc[0] + fireImageView.getWidth(), loc[1] + fireImageView.getHeight());
+            for(ImageView image: enemyDragons){
+                image.getLocationInWindow(loc);
+                final Rect rc2 = new Rect(loc[0], loc[1],
+                        loc[0] + image.getWidth(), loc[1] + image.getHeight());
+
+                if (Rect.intersects(rc1,rc2)) {
+                    Toast.makeText(this, "Enemy Killed", Toast.LENGTH_SHORT).show();
+                    scorecounter++;
+                    scorecounterTextView.setText(String.valueOf(scorecounter));
+                    mainlayout.removeView(image);
+                    mainlayout.removeView(fireImageView) ;
+                    coinDeleted=true;
+                }
+
+        }
+
+    }
+
     Handler handler2;
     private Runnable runnable2;
     private void UpdateCollison() {
+        final int[] loc = new int[2];
+
+        chicken.getLocationInWindow(loc);
+        final Rect rc1 = new Rect(loc[0], loc[1],
+                loc[0] + chicken.getWidth(), loc[1] + chicken.getHeight());
 
                     for(ImageView image: enemyCoins){
-                       if(image.getX()-chicken.getX()<=1){
-                           image.setVisibility(View.GONE);
-                           mainlayout.removeView(image);
-                           coincounter++;
-                           enemyCoins.remove(image);
 
-                           coincountertext.setText(String.valueOf(coincounter));
+                        image.getLocationInWindow(loc);
+                        final Rect rc2 = new Rect(loc[0], loc[1],
+                                loc[0] + image.getWidth(), loc[1] + image.getHeight());
 
-                       }
+                        if (Rect.intersects(rc1,rc2)) {
+                            Toast.makeText(this, "Coins collison", Toast.LENGTH_SHORT).show();
+                            coincounter++;
+                            coincountertext.setText(String.valueOf(coincounter));
+                            mainlayout.removeView(image);
+                        }
                     }
                     for(ImageView image: enemyDragons){
-                        if(image.getX()-chicken.getX()<=1){
-                            image.setVisibility(View.GONE);
-                            mainlayout.removeView(image);
-                            enemyDragons.remove(image);
+                        image.getLocationInWindow(loc);
+                        final Rect rc2 = new Rect(loc[0], loc[1],
+                                loc[0] + image.getWidth(), loc[1] + image.getHeight());
 
+                        if (Rect.intersects(rc1,rc2)) {
+                            Toast.makeText(this, "Enemey Dragons collison", Toast.LENGTH_SHORT).show();
                         }
                     }
 
 
     }
 
+    private Boolean coinDeleted=true;
+    private ImageView fireImageView;
     private void defendPlayerWithCoins() {
+        if(coinDeleted==true){
+            coinDeleted=false;
+            fireImageView.setBackgroundResource(R.drawable.fireanimation);
+            fireImageView.setX(chicken.getX() + 150);
+            fireImageView.setY(chicken.getY() + 50);
+            mainlayout.addView(fireImageView, fireImageView.getId());
+            objectanimator = ObjectAnimator.ofFloat(fireImageView, "x", chicken.getX()+800);
+            objectanimator.setDuration(900);
+            objectanimator.start();
+            AnimationDrawable anim = (AnimationDrawable) fireImageView.getBackground();
+            anim.setOneShot(false);
+            anim.start();
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    coinDeleted=true;
+                    runOnUiThread(new Runnable() {
 
-        final ImageView imageView = new ImageView(getApplicationContext());
-        imageView.setBackgroundResource(R.drawable.coinanimation);
-        imageView.setX(chicken.getX() + 150);
-        imageView.setY(chicken.getY() + 50);
-        mainlayout.addView(imageView);
-        AnimationDrawable anim = (AnimationDrawable) imageView.getBackground();
-        anim.setOneShot(false);
-        anim.start();
-        objectanimator = ObjectAnimator.ofFloat(imageView, "x", 4000);
-        objectanimator.setDuration(2000);
-        objectanimator.start();
-
+                        @Override
+                        public void run() {
+                            mainlayout.removeView(fireImageView);
+                        }
+                    });
+                }
+            }, 900);
+        }
 
     }
     Handler handler;
@@ -179,7 +250,7 @@ public class Level1 extends AppCompatActivity {
                             objectanimator.start();
                             handler.postDelayed(runnable, interval);
                         }
-                        //emenyAttack();
+                        emenyAttack();
                         throwSmallDragons();
                     }
                 };
@@ -189,10 +260,7 @@ public class Level1 extends AppCompatActivity {
 
 
     }
-
-
-    private Handler handler1;
-    private Runnable runnable1;
+    
     private void emenyAttack() {
 
         final ImageView imageView = new ImageView(getApplicationContext());
