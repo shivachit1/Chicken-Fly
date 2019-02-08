@@ -1,6 +1,9 @@
 package com.example.ours.activities;
 
 import android.animation.ObjectAnimator;
+import android.app.Activity;
+import android.app.Dialog;
+import android.content.Intent;
 import android.graphics.Rect;
 import android.graphics.drawable.AnimationDrawable;
 import android.media.MediaPlayer;
@@ -10,8 +13,10 @@ import android.support.constraint.ConstraintLayout;
 import android.support.constraint.ConstraintSet;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnTouchListener;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -21,7 +26,6 @@ import com.example.ours.R;
 import com.example.ours.dialogfragments.menuFragment;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -34,16 +38,16 @@ public class Level1 extends AppCompatActivity {
     private TextView coincountertext;
     private TextView scorecounterTextView;
     private int scorecounter=0;
+    private MediaPlayer backgroundmusic;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_level1);
-
+        inflater = (LayoutInflater) Level1.this.getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
         mainlayout = findViewById(R.id.main);
 
         fireImageView = new ImageView(getApplicationContext());
-
         final ConstraintLayout leftlayout = findViewById(R.id.leftlayout);
         ConstraintLayout rightlayout = findViewById(R.id.rightlayout);
         chicken = findViewById(R.id.chicken);
@@ -84,7 +88,7 @@ public class Level1 extends AppCompatActivity {
 
             }
         });
-        final MediaPlayer mp = MediaPlayer.create(Level1.this, R.raw.bubble);
+
         rightlayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -99,13 +103,17 @@ public class Level1 extends AppCompatActivity {
 
             }
         });
-        leftlayout.setOnTouchListener(new View.OnTouchListener() {
+        leftlayout.setOnTouchListener(new OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 chicken.setX(event.getX());
                 chicken.setY(event.getY());
                 final int interval = 100;
                 // 1 Second
+
+                if(coincounter>5 && scorecounter>250){
+                    levelComppleted();
+                }
                 handler2 = new Handler();
                 runnable2 = new Runnable(){
                     public void run() {
@@ -119,28 +127,35 @@ public class Level1 extends AppCompatActivity {
         });
 
     }
+    private Boolean countingscore=true;
     private void UpdateFireandEnemyCollision() {
 
-            final int[] loc = new int[2];
+        if(countingscore){
 
-            fireImageView.getLocationInWindow(loc);
-            final Rect rc1 = new Rect(loc[0], loc[1],
-                    loc[0] + fireImageView.getWidth(), loc[1] + fireImageView.getHeight());
-            for(ImageView image: enemyDragons){
-                image.getLocationInWindow(loc);
-                final Rect rc2 = new Rect(loc[0], loc[1],
-                        loc[0] + image.getWidth(), loc[1] + image.getHeight());
+                    final int[] loc = new int[2];
 
-                if (Rect.intersects(rc1,rc2)) {
-                    Toast.makeText(this, "Enemy Killed", Toast.LENGTH_SHORT).show();
-                    scorecounter++;
-                    scorecounterTextView.setText(String.valueOf(scorecounter));
-                    mainlayout.removeView(image);
-                    mainlayout.removeView(fireImageView) ;
-                    coinDeleted=true;
-                }
+                    fireImageView.getLocationInWindow(loc);
+                    final Rect rc1 = new Rect(loc[0], loc[1],
+                            loc[0] + fireImageView.getWidth(), loc[1] + fireImageView.getHeight());
+                    for(ImageView image: enemyDragons){
+                        image.getLocationInWindow(loc);
+                        final Rect rc2 = new Rect(loc[0], loc[1],
+                                loc[0] + image.getWidth(), loc[1] + image.getHeight());
+
+                        if (Rect.intersects(rc1,rc2)) {
+                            scorecounter=scorecounter+50;
+                            scorecounterTextView.setText(String.valueOf(scorecounter));
+                            mainlayout.removeView(image);
+                            mainlayout.removeView(fireImageView) ;
+                            coinDeleted=true;
+                            countingscore=false;
+
+                        }
+
+                    }
 
         }
+
 
     }
 
@@ -173,17 +188,60 @@ public class Level1 extends AppCompatActivity {
 
                         if (Rect.intersects(rc1,rc2)) {
                             Toast.makeText(this, "Enemey Dragons collison", Toast.LENGTH_SHORT).show();
+                            GameOver();
                         }
                     }
 
 
     }
+private LayoutInflater inflater;
+    private void GameOver() {
+        final Dialog dialog=new Dialog(this);
+        View gameOverView = inflater.inflate(R.layout.gameoverview, null);
+        TextView score=gameOverView.findViewById(R.id.score);
+        score.setText(String.valueOf(scorecounter));
+        TextView coincount=gameOverView.findViewById(R.id.coincount);
+        coincount.setText(String.valueOf(coincounter));
+        Button restart=gameOverView.findViewById(R.id.resumebutton);
+        dialog.setContentView(gameOverView);
+        dialog.show();
+        restart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplication(), Level1.class);
+                intent.putExtra("Level 1", "Start");
+                startActivity(intent);
+            }
+        });
 
+    }
+    private Boolean levelcomplete=true;
+    private void levelComppleted(){
+    if(levelcomplete){
+        final Dialog dialog=new Dialog(this);
+        View gameOverView = inflater.inflate(R.layout.levelcompleted,null);
+        dialog.setContentView(gameOverView);
+        dialog.show();
+        levelcomplete=false;
+    }
+
+
+
+    }
     private Boolean coinDeleted=true;
     private ImageView fireImageView;
     private void defendPlayerWithCoins() {
         if(coinDeleted==true){
+            final MediaPlayer mp = MediaPlayer.create(Level1.this, R.raw.bubble);
+            mp.start();
+            mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+                    backgroundmusic.start();
+                }
+            });
             coinDeleted=false;
+            countingscore=true;
             fireImageView.setBackgroundResource(R.drawable.fireanimation);
             fireImageView.setX(chicken.getX() + 150);
             fireImageView.setY(chicken.getY() + 50);
@@ -251,7 +309,20 @@ public class Level1 extends AppCompatActivity {
                             handler.postDelayed(runnable, interval);
                         }
                         emenyAttack();
-                        throwSmallDragons();
+                        Timer timer = new Timer();
+                        timer.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        throwSmallDragons();
+                                    }
+                                });
+
+                            }
+                        }, 700);
+
                     }
                 };
                 handler.postDelayed(runnable, interval);
@@ -260,7 +331,7 @@ public class Level1 extends AppCompatActivity {
 
 
     }
-    
+
     private void emenyAttack() {
 
         final ImageView imageView = new ImageView(getApplicationContext());
@@ -298,11 +369,36 @@ public class Level1 extends AppCompatActivity {
                 anim.setOneShot(false);
                 anim.start();
                 objectanimator = ObjectAnimator.ofFloat(imageView, "x", -300);
-                objectanimator.setDuration(10000);
+                objectanimator.setDuration(3000);
                 objectanimator.start();
 
 
     }
+    @Override
+    public void onStop() {
+        super.onStop();
+        backgroundmusic.stop();
 
+
+    }
+    @Override
+    public void onResume() {
+        super.onResume();
+        backgroundmusic= MediaPlayer.create(Level1.this, R.raw.birds);
+        backgroundmusic.start();
+        backgroundmusic.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                mp.start();
+            }
+        });
+
+    }
+    @Override
+    public void onPause() {
+        super.onPause();
+        backgroundmusic.stop();
+
+    }
 
 }
